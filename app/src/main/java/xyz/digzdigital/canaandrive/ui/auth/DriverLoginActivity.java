@@ -1,5 +1,6 @@
 package xyz.digzdigital.canaandrive.ui.auth;
 
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -43,19 +44,19 @@ public class DriverLoginActivity extends AppCompatActivity implements View.OnCli
     EditText password;
     @BindView(R.id.activity_login)
     LinearLayout activityLogin;
+    private ProgressDialog progressDialog;
 
     private FirebaseAuth auth;
-    private boolean isDriver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
         ButterKnife.bind(this);
+        progressDialog = new ProgressDialog(this);
 
         auth = FirebaseAuth.getInstance();
-        if (auth.getCurrentUser() != null) switchActivity(MapsActivity.class);
-        isDriver = getIntent().getBooleanExtra("isDriver", false);
+        auth.signInAnonymously();
 
             btnResetPassword.setVisibility(View.GONE);
             btnSignup.setVisibility(View.GONE);
@@ -84,7 +85,9 @@ public class DriverLoginActivity extends AppCompatActivity implements View.OnCli
         String emailText = email.getText().toString().trim();
         String passwordText = password.getText().toString().trim();
         if (!validate(emailText, passwordText)) return;
-        progressBar.setVisibility(View.VISIBLE);
+        progressDialog.setTitle("Please wait");
+        progressDialog.setMessage("Please wait, signing you in");
+        progressDialog.show();
         btnLogin.setEnabled(false);
         signIn(emailText, passwordText);
         // auth.signInWithEmailAndPassword(emailText, passwordText).addOnCompleteListener(this, this);
@@ -94,6 +97,7 @@ public class DriverLoginActivity extends AppCompatActivity implements View.OnCli
         FirebaseDatabase.getInstance().getReference().child("auth").child(emailText).child("password").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
+                progressDialog.dismiss();
                 if (((String) dataSnapshot.getValue()).equals(passwordText)){
                     switchActivity(DriverActivity.class);
                 }else{
@@ -147,6 +151,7 @@ public class DriverLoginActivity extends AppCompatActivity implements View.OnCli
 
     private void switchActivity(Class classFile) {
         Intent intent = new Intent(this, classFile);
+        intent.putExtra("driverid", email.getText().toString());
         startActivity(intent);
     }
 }

@@ -12,6 +12,7 @@ public class Trip {
     private double longitude;
     private boolean isApproved;
     private boolean isCompleted;
+    private boolean newTrip;
 
     public Trip() {
     }
@@ -86,5 +87,13 @@ public class Trip {
 
     public void setCompleted(boolean completed) {
         isCompleted = completed;
+    }
+
+    public boolean isNewTrip() {
+        return newTrip;
+    }
+
+    public void setNewTrip(boolean newTrip) {
+        this.newTrip = newTrip;
     }
 }

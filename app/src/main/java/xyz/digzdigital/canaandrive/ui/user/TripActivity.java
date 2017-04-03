@@ -3,9 +3,12 @@ package xyz.digzdigital.canaandrive.ui.user;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -66,10 +69,17 @@ public class TripActivity extends FragmentActivity implements OnMapReadyCallback
                 driver = new Driver();
                 driver.setName((String) snapshot.child("name").getValue());
                 driver.setCar((String) snapshot.child("car").getValue());
-                driver.setRating((Float) snapshot.child("rating").getValue());
+                try {
+                    driver.setRating((Double) snapshot.child("rating").getValue());
+                }catch (ClassCastException e){
+                    driver.setRating((Long) snapshot.child("rating").getValue());
+                }
                 driver.setLatitude((Double) snapshot.child("latitude").getValue());
                 driver.setLongitude((Double) snapshot.child("longitude").getValue());
-                driverMarker.setPosition(new LatLng(driver.getLatitude(), driver.getLongitude()));
+                LatLng latLng = new LatLng(driver.getLatitude(), driver.getLongitude());
+                updateMarker(latLng);
+                centerCamera(latLng);
+                zoomCamera();
             }
 
             @Override
@@ -79,10 +89,25 @@ public class TripActivity extends FragmentActivity implements OnMapReadyCallback
         });
     }
 
+    private void updateMarker(LatLng latLng) {
+        driverMarker.setPosition(latLng);
+    }
+
+    private void centerCamera(LatLng latLng){
+        CameraUpdate center = CameraUpdateFactory.newLatLng(latLng);
+        map.moveCamera(center);
+    }
+
+    private void zoomCamera(){
+        CameraUpdate zoom = CameraUpdateFactory.zoomTo(14);
+        map.animateCamera(zoom);
+
+    }
     private Marker createMarker(LatLng latLng) {
         MarkerOptions options = new MarkerOptions()
                 .position(latLng)
-                .title("Driver Location");
+                .title("Driver Location")
+                .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_person_pin_circle_black_24dp));
         return map.addMarker(options);
     }
 }

@@ -34,6 +34,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
@@ -77,7 +78,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     AutoCompleteTextView endAutoComplete;
     @BindView(R.id.send)
     ImageButton routeButton;
-
+    DatabaseReference reference;
+    String userid;
     private GoogleMap map;
     private LocationHelper locationHelper;
     private DriversLoader driversLoader;
@@ -86,11 +88,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private boolean mapReady;
     private GoogleApiClient googleApiClient;
     private ProgressDialog progressDialog;
-    private ArrayList<Driver> drivers;
-    private ArrayList<Marker> markers;
+    private ArrayList<Driver> drivers = new ArrayList<>();
+    private ArrayList<Marker> markers = new ArrayList<>();
     private Boolean fromFt = false;
-    DatabaseReference reference;
-    String userid;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -100,6 +100,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         userid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         progressDialog = new ProgressDialog(this);
         tripDirection.setOnCheckedChangeListener(this);
+        reference = FirebaseDatabase.getInstance().getReference();
 
         locationHelper = new LocationHelper(this);
         locationHelper.setListener(this);
@@ -138,10 +139,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         map = googleMap;
-
+        CameraUpdate center = CameraUpdateFactory.newLatLng(new LatLng(6.667876, 3.151196));
+        CameraUpdate zoom = CameraUpdateFactory.zoomTo(14);
+        map.moveCamera(center);
+        map.animateCamera(zoom);
         map.setOnMarkerClickListener(this);
         mapReady = true;
-        setUpPlaceAutoCompleteAdapter();
         map.setOnCameraChangeListener(new GoogleMap.OnCameraChangeListener() {
             @Override
             public void onCameraChange(CameraPosition position) {
@@ -150,8 +153,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        CameraUpdate center = CameraUpdateFactory.newLatLng(new LatLng(6.667876, 3.151196));
-        CameraUpdate zoom = CameraUpdateFactory.zoomTo(14);
 
         map.moveCamera(center);
         map.animateCamera(zoom);
@@ -165,6 +166,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void setPlaceAdapterToView(PlaceAutoCompleteAdapter adapter) {
         endAutoComplete.setAdapter(adapter);
+
+    }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+        setUpPlaceAutoCompleteAdapter();
 
     }
 
@@ -202,6 +209,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onDriversLoaded(ArrayList<Driver> drivers) {
         map.clear();
+
         for (Driver driver : drivers) {
             Marker marker = createMarker(driver, 0);
             markers.add(marker);
@@ -212,7 +220,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Marker createMarker(Driver driver, int position) {
         MarkerOptions options = new MarkerOptions()
                 .position(new LatLng(driver.getLatitude(), driver.getLongitude()))
-                .title(driver.getName());
+                .title(driver.getName())
+                .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_person_pin_circle_black_24dp));
         Marker marker = map.addMarker(options);
         marker.setTag(driver);
 
@@ -374,12 +383,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public boolean onMarkerClick(Marker marker) {
         Driver driver = (Driver) marker.getTag();
         showInfoWindow(driver);
-        return false;
+        return true;
     }
 
     private void showInfoWindow(final Driver driver) {
 
-        final Dialog dialog = new Dialog(this);
+        final Dialog dialog = new Dialog(this, android.R.style.Theme_Translucent_NoTitleBar_Fullscreen);
         dialog.setContentView(R.layout.item_driver_select);
         dialog.setTitle("Driver Details");
 
@@ -389,6 +398,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         ImageButton close = (ImageButton) dialog.findViewById(R.id.close);
         Button requestDriver = (Button) dialog.findViewById(R.id.requestDriver);
         RatingBar driverRating = (RatingBar) dialog.findViewById(R.id.driverRating);
+
 
         driverName.setText(driver.getName());
         driverCar.setText(driver.getCar());
@@ -409,29 +419,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 Trip trip = createTrip(driver.getId());
                 showProgressDialog("Driver request", "Waiting for response from driver");
                 requestDriver(trip);
-                dialog.show();
             }
         });
+        dialog.show();
+
     }
 
 
     private void requestDriver(Trip trip) {
 
-        reference = FirebaseDatabase.getInstance().getReference();
-        reference.child("drivers").child("trip").child(trip.getDriverId()).setValue(trip);
+
+        reference.child("trips").child(trip.getDriverId()).setValue(trip);
+        reference.child("user").child(userid).child("trip").setValue(trip);
         listenForResponseFromDriver(trip);
     }
 
     private void listenForResponseFromDriver(final Trip trip) {
-        reference.child("drivers").child("trip").child(trip.getDriverId()).addValueEventListener(new ValueEventListener() {
+        final int[] times = {0};
+        reference.child("trips").child(trip.getDriverId()).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                dismissProgressDialog();
-                if ((Boolean) dataSnapshot.child("isApproved").getValue()){
-                    Intent intent = new Intent(MapsActivity.this, TripActivity.class);
-                    intent.putExtra("driverid", trip.getDriverId());
-                    startActivity(intent);
+                if (times[0] > 0) {
+                    dismissProgressDialog();
+                    if ((Boolean) dataSnapshot.child("approved").getValue()) {
+                        Intent intent = new Intent(MapsActivity.this, TripActivity.class);
+                        intent.putExtra("driverId", trip.getDriverId());
+                        startActivity(intent);
+                    }
                 }
+                times[0]++;
+
             }
 
             @Override
@@ -446,15 +463,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         trip.setDriverId(id);
         trip.setUserId(userid);
         trip.setFromFt(fromFt);
-        if (fromFt){
+        if (fromFt) {
             trip.setLatitude(end.latitude);
             trip.setLongitude(end.longitude);
-        }else {
+        } else {
             trip.setLatitude(myLocation.latitude);
             trip.setLongitude(myLocation.longitude);
         }
         trip.setApproved(false);
         trip.setCompleted(false);
+        trip.setNewTrip(true);
         return trip;
     }
 }

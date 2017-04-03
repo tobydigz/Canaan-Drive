@@ -55,7 +55,11 @@ public class DriversLoader implements ValueEventListener, ChildEventListener {
                 driver.setId(snapshot.getKey());
                 driver.setName((String) snapshot.child("name").getValue());
                 driver.setCar((String) snapshot.child("car").getValue());
-                driver.setRating((Double) snapshot.child("rating").getValue());
+                try {
+                    driver.setRating((Double) snapshot.child("rating").getValue());
+                }catch (ClassCastException e){
+                    driver.setRating((Long) snapshot.child("rating").getValue());
+                }
                 driver.setLatitude((Double) snapshot.child("latitude").getValue());
                 driver.setLongitude((Double) snapshot.child("longitude").getValue());
                 if (validateDriver(driver)) drivers.add(driver);
@@ -93,32 +97,40 @@ public class DriversLoader implements ValueEventListener, ChildEventListener {
 
     @Override
     public void onChildAdded(DataSnapshot snapshot, String s) {
-        if (!(Boolean) snapshot.child("isOnline").getValue() || !(Boolean) snapshot.child("isAvailable").getValue())
+        /*if (!(Boolean) snapshot.child("isOnline").getValue() || !(Boolean) snapshot.child("isAvailable").getValue())
             return;
         Driver driver = new Driver();
         driver.setId(snapshot.getKey());
         driver.setName((String) snapshot.child("name").getValue());
         driver.setCar((String) snapshot.child("car").getValue());
-        driver.setRating((Float) snapshot.child("rating").getValue());
+        try {
+            driver.setRating((Double) snapshot.child("rating").getValue());
+        }catch (ClassCastException e){
+            driver.setRating((Long) snapshot.child("rating").getValue());
+        }
         driver.setLatitude((Double) snapshot.child("latitude").getValue());
         driver.setLongitude((Double) snapshot.child("longitude").getValue());
         if (validateDriver(driver))
-            listener.onDriverAdded(driver);
+            listener.onDriverAdded(driver);*/
     }
 
     @Override
     public void onChildChanged(DataSnapshot snapshot, String s) {
-        if ((Boolean) snapshot.child("isOnline").getValue() && (Boolean) snapshot.child("isAvailable").getValue())
-            return;
+        if ((Boolean) snapshot.child("isOnline").getValue() && (Boolean) snapshot.child("isAvailable").getValue()){
+
         Driver driver = new Driver();
         driver.setId(snapshot.getKey());
         driver.setName((String) snapshot.child("name").getValue());
         driver.setCar((String) snapshot.child("car").getValue());
-        driver.setRating((Float) snapshot.child("rating").getValue());
+        try {
+            driver.setRating((Double) snapshot.child("rating").getValue());
+        }catch (ClassCastException e){
+            driver.setRating((Long) snapshot.child("rating").getValue());
+        }
         driver.setLatitude((Double) snapshot.child("latitude").getValue());
         driver.setLongitude((Double) snapshot.child("longitude").getValue());
         if (validateDriver(driver))
-            listener.onDriverPositionChanged(driver);
+            listener.onDriverPositionChanged(driver);}
         // else listener.onDriverRemoved(driver);
     }
 
@@ -128,7 +140,11 @@ public class DriversLoader implements ValueEventListener, ChildEventListener {
         driver.setId(snapshot.getKey());
         driver.setName((String) snapshot.child("name").getValue());
         driver.setCar((String) snapshot.child("car").getValue());
-        driver.setRating((Float) snapshot.child("rating").getValue());
+        try {
+            driver.setRating((Double) snapshot.child("rating").getValue());
+        }catch (ClassCastException e){
+            driver.setRating((Long) snapshot.child("rating").getValue());
+        }
         driver.setLatitude((Double) snapshot.child("latitude").getValue());
         driver.setLongitude((Double) snapshot.child("longitude").getValue());
         listener.onDriverRemoved(driver);

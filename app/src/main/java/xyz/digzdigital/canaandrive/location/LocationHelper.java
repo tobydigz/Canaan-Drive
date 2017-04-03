@@ -77,6 +77,7 @@ public class LocationHelper implements GoogleApiClient.ConnectionCallbacks, Goog
 
     @Override
     public void onConnected(@Nullable Bundle bundle) {
+        listener.onConnected(bundle);
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
@@ -146,6 +147,7 @@ public class LocationHelper implements GoogleApiClient.ConnectionCallbacks, Goog
     }
 
     public interface LocationHelperListener {
+        void onConnected(Bundle bundle);
         void onConnectionSuspended(int i);
 
         void onConnectionFailed(@NonNull ConnectionResult connectionResult);

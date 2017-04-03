@@ -2,7 +2,6 @@ package xyz.digzdigital.canaandrive.ui.driver;
 
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.IdRes;
@@ -27,7 +26,6 @@ import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.PlaceBuffer;
 import com.google.android.gms.location.places.Places;
-import com.google.android.gms.location.places.ui.PlaceAutocomplete;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.firebase.database.DataSnapshot;
@@ -42,7 +40,6 @@ import butterknife.ButterKnife;
 import butterknife.OnClick;
 import xyz.digzdigital.canaandrive.R;
 import xyz.digzdigital.canaandrive.adapter.PlaceAutoCompleteAdapter;
-import xyz.digzdigital.canaandrive.data.DriversLoader;
 import xyz.digzdigital.canaandrive.location.LocationHelper;
 
 public class DriverActivity extends AppCompatActivity implements LocationHelper.LocationHelperListener, RadioGroup.OnCheckedChangeListener, View.OnClickListener {
@@ -75,15 +72,23 @@ public class DriverActivity extends AppCompatActivity implements LocationHelper.
         setContentView(R.layout.activity_driver);
 
         ButterKnife.bind(this);
+        helper = new LocationHelper(this);
+        helper.setListener(this);
+        helper.createGoogleClient();
+        helper.onStart();
 
         tripDirection.setOnCheckedChangeListener(this);
         rideOn.setOnClickListener(this);
+        id = getIntent().getStringExtra("driverid");
         reference = FirebaseDatabase.getInstance().getReference().child("drivers").child(id);
-        listenerRef = FirebaseDatabase.getInstance().getReference().child("drivers").child("trip").child(id);
+        listenerRef = FirebaseDatabase.getInstance().getReference().child("trips").child(id);
         listenerRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-
+                boolean newTrip = (Boolean) dataSnapshot.child("newTrip").getValue();
+                if (newTrip) {
+                    onRequestReceived();
+                }
             }
 
             @Override
@@ -92,20 +97,16 @@ public class DriverActivity extends AppCompatActivity implements LocationHelper.
             }
         });
 
-        setUpPlaceAutoCompleteAdapter();
 
         reference.child("isOnline").onDisconnect().setValue(false);
 
         reference.child("isOnline").setValue(true);
 
-        helper = new LocationHelper(this);
-        helper.setListener(this);
-        helper.createGoogleClient();
+
 
         setToken();
         setTextWatchers();
         setClickListeners();
-        adapter.setBounds(BOUNDS_NIGERIA);
 
 
     }
@@ -117,6 +118,13 @@ public class DriverActivity extends AppCompatActivity implements LocationHelper.
     private void setToken() {
         String token = FirebaseInstanceId.getInstance().getToken();
         FirebaseDatabase.getInstance().getReference().child("notification").child(id).setValue(token);
+    }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+        setUpPlaceAutoCompleteAdapter();
+        adapter.setBounds(BOUNDS_NIGERIA);
+
     }
 
     @Override
@@ -146,7 +154,6 @@ public class DriverActivity extends AppCompatActivity implements LocationHelper.
     @Override
     protected void onStart() {
         super.onStart();
-        helper.onStart();
     }
 
     @Override
@@ -158,7 +165,7 @@ public class DriverActivity extends AppCompatActivity implements LocationHelper.
     @Override
     protected void onResume() {
         super.onResume();
-        helper.onStop();
+        helper.onResume();
     }
 
     @Override
@@ -288,7 +295,7 @@ public class DriverActivity extends AppCompatActivity implements LocationHelper.
         if (end != null) end = null;
     }
 
-    private void onRequestReceived(){
+    private void onRequestReceived() {
         reference.child("isAvailable").setValue(false);
         showAlertDialog();
     }
@@ -301,14 +308,14 @@ public class DriverActivity extends AppCompatActivity implements LocationHelper.
         builder.setPositiveButton("Accept", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                // Intent intent =
+                listenerRef.child("approved").setValue(true);
             }
         });
 
         builder.setNegativeButton("Reject", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-
+                listenerRef.child("approved").setValue(false);
             }
         });
 

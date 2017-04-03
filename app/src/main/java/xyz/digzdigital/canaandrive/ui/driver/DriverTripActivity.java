@@ -18,9 +18,6 @@ import com.google.firebase.database.ValueEventListener;
 import xyz.digzdigital.canaandrive.R;
 import xyz.digzdigital.canaandrive.data.model.Driver;
 
-/**
- * Created by Digz on 02/04/2017.
- */
 
 public class DriverTripActivity extends FragmentActivity implements OnMapReadyCallback {
 
